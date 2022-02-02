@@ -1,3 +1,10 @@
+import processing.serial.*;
+
+Serial teensyPort;                 // Serial port number to read from
+static String data;    // IMUs x angles difference. Data from teensy.
+float angle = 0;
+
+
 //bow shape
 float x_bow;
 float y_bow;
@@ -16,8 +23,27 @@ float y_c;
 int c = 200;
 
 
+
 PShape bot;
 PShape f;
+
+
+/* print data on externatl file */
+// error/correct counter
+int limit_angle = 15;  
+boolean wrong_angle = false;
+float error_duration;
+float correct_duration;
+
+//txt file with error duration
+PrintWriter output;
+
+void keyPressed() {
+  output.flush(); // Writes the remaining data to the file
+  output.close(); // Finishes the file
+  exit(); // Stops the program
+}
+
 
 void setup() {
   size(1280, 720);
@@ -32,12 +58,49 @@ void setup() {
 
   bot = loadShape("hand_03.svg");
   f = loadShape("cello_f.svg");
+  
+  // Serial port information to communicate with teensy
+  String portName = "/dev/ttyACM0";
+  teensyPort = new Serial(this, portName);
+  
+  // Create a new file in the sketch directory
+  output = createWriter("error_duration.txt");
+  
 }
 
 void draw() {
 
   //mouse position sets the degree
-  int angle = mouseX - 100;
+  // int angle = mouseX - 100;
+  
+  if( teensyPort.available() > 0 ) {    // if data is available
+    data = teensyPort.readStringUntil('\n');
+    String[] s = splitTokens(data, " ");
+    if (s[0].equals("angleDifference") == true){
+      try {
+         angle = float(trim(s[1]));
+      }
+      catch(Exception e) {
+        println("Error in converting value"); 
+      }
+    }
+  }
+  
+  //check if the bow's angle is higher/lower than a certain angle
+  if (angle >= limit_angle 
+    || angle <= -limit_angle) {
+    wrong_angle = true;
+  } else {
+    wrong_angle = false;
+  }
+  
+  // check how much time the bow is kept wrong
+  if (wrong_angle) {
+    error_duration = error_duration + 1;
+  } else if (!wrong_angle) {
+    correct_duration = correct_duration + 1;
+  }
+  
   background(255);
 
   //Alfa is our angle expressed in radians
@@ -99,6 +162,14 @@ void draw() {
 
   //check some values
   println("----------");
-  println("angle:", angle);
-  println("raggio:", raggio);
+  println("Current angle: ", angle);
+  println("Error condition: ", wrong_angle);
+  println("Error duration (s): ", error_duration / 50);
+  println("Correct duration (s): ", correct_duration / 50);
+
+  output.println("----------");
+  output.println("Current angle: " + angle);
+  output.println("Error condition: " + wrong_angle);
+  output.println("Error duration (s): " + error_duration / 50);
+  output.println("Correct duration (s): " + correct_duration / 50);
 }

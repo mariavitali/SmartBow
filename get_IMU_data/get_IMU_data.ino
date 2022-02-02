@@ -109,7 +109,10 @@ Adafruit_BNO055 imu_bow = Adafruit_BNO055(WIRE1_BUS, -1, BNO055_ADDRESS_A, I2C_M
 bool reset_calibration = false;  // set to true if you want to redo the calibration rather than using the values stored in the EEPROM
 bool display_BNO055_info = true; // set to true if you want to print on the serial port the infromation about the status and calibration of the IMU
 
+
 /*--------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
 
 /* zero value of bow and cello */
 float zero_offset_cello = 0;
@@ -177,6 +180,24 @@ void setup() {
 
 
 void loop() {
+  /* check if buttons are pressed */
+  button_pressed(onOffButton_pin, &onOffButtonState, &lastOnOffButtonState, &lastOnOffButtonDebounceTime, greenLED_pin, &greenLEDState);
+  button_pressed(recalibrationButton_pin, &recalibrationButtonState, &lastRecalibrationButtonState, &lastRecalibrationButtonDebounceTime, redLED_pin, &redLEDState);
+  button_pressed(setZeroButton_pin, &setZeroButtonState, &lastSetZeroButtonState, &lastSetZeroButtonDebounceTime, blueLED_pin, &blueLEDState);
+
+
+  /* if recalibrationButton is pressed, recalibrate sensors */
+  if (digitalRead(redLED_pin) == HIGH) {
+    reset_calibration = true;
+    imu_calibration(imu_cello, N_CELLO, reset_calibration);
+    imu_calibration(imu_bow, N_BOW, reset_calibration);
+
+    reset_calibration = false;
+
+    // turn off led after calibration is over
+    digitalWrite(redLED_pin, LOW);
+    redLEDState = !redLEDState;
+  }
 
 
   /* get cello data */
@@ -188,65 +209,67 @@ void loop() {
   sensors_event_t orientation_bow;
   imu_bow.getEvent(&orientation_bow);
 
-  // controlla se il pulsante (setZeroButton) è premuto. Se è premuto, resetta lo zero --> controllare se il LED è acceso (digitalRead(blueLED_pin) == HIGH)
-  // zero_offset_cello = orientation_cello.orientation.x;
-  // zero_offset_bow = orientation_bow.orientation.x;
-  // delay (1000);
-  // spegnere led
+  /* check if setZeroButton is pressed. If pressed, reset zero */
+  if (digitalRead(blueLED_pin) == HIGH) {
+    zero_offset_cello = orientation_cello.orientation.x;
+    zero_offset_bow = orientation_bow.orientation.x;
+    delay (1000);
+    // turn off led
+    digitalWrite(blueLED_pin, LOW);
+    blueLEDState = !blueLEDState;
+  }
 
+  Serial.print("orientation_cello.orientation.x = ");
+  Serial.println(orientation_cello.orientation.x);
+  Serial.print("orientation_bow.orientation.x = ");
+  Serial.println(orientation_bow.orientation.x);
+  Serial.print("(orientation_cello.orientation.x - zero_offset_cello) = ");
+  Serial.println(orientation_cello.orientation.x - zero_offset_cello);
+  Serial.print("(orientation_bow.orientation.x - zero_offset_bow) = ");
+  Serial.println(orientation_bow.orientation.x - zero_offset_bow);
+  // change the "zero"
+  orientation_cello.orientation.x = (orientation_cello.orientation.x - zero_offset_cello) + 180;   // +180, to set the zero at the central value of the range (0, 360)
+  orientation_bow.orientation.x = (orientation_bow.orientation.x - zero_offset_bow) + 180;
 
-  // cambiare il riferimento, lo "zero"
-  // orientation_cello.orientation.x -= zero_offset_cello
-
-
-  /* print data from cello */
+/*
+  // print data from cello
   Serial.println("=========== CELLO ===========");
   printEvent(&orientation_cello);
   Serial.print("");
 
-  /* print data from bow */
+
+
+  // print data from bow
   Serial.println("=========== BOW ===========");
   printEvent(&orientation_bow);
   Serial.print("");
+*/
 
 
   /* check if the ratio between orientations is correct */
-  /* check_orientation(&relative_orientation, orientation_cello.orientation.x, orientation_bow.orientation.x);
-    if(relative_orientation > 0){
-      // activate motorHigher
-      digitalWrite(motorLower_pin, LOW);
-      digitalWrite(motorHigher_pin, HIGH);
-
-    } else if(relative_orientation < 0){
-      // activate motorLower
-      digitalWrite(motorLower_pin, HIGH);
-      digitalWrite(motorHigher_pin, LOW);
-    } else {
-      // turn off motors
-      digitalWrite(motorLower_pin, LOW);
-      digitalWrite(motorHigher_pin, LOW);
-    } */
 
   check_orientation(&relative_orientation, orientation_cello.orientation.x, orientation_bow.orientation.x, &angle_difference);
+
   // the greater the difference between angles, the more motors vibrate
   if (relative_orientation > 0) {
     // activate motorHigher
     digitalWrite(motorLower_pin, LOW);
-    analogWrite(motorHigher_pin, map(angle_difference, 16, 344, 0, 255)); // !digitalRead(greenLED_pin) * map...
-
+    // analogWrite(motorHigher_pin, !digitalRead(greenLED_pin) * map(angle_difference, 16, 344, 0, 255));
+    digitalWrite(motorHigher_pin, digitalRead(greenLED_pin));
   } else if (relative_orientation < 0) {
     // activate motorLower
-    analogWrite(motorLower_pin, map(angle_difference, 16, 344, 0, 255));
     digitalWrite(motorHigher_pin, LOW);
+    // analogWrite(motorLower_pin, !digitalRead(greenLED_pin) * map(angle_difference, 16, 344, 0, 255));
+    digitalWrite(motorLower_pin, digitalRead(greenLED_pin));
   } else {
     // turn off motors
     digitalWrite(motorLower_pin, LOW);
     digitalWrite(motorHigher_pin, LOW);
   }
 
-  Serial.print("rel_or : ");
-  Serial.print(relative_orientation);
-  Serial.print("\t angle_diff : ");
+  // Serial.print("rel_or : ");
+  // Serial.print(relative_orientation);
+  Serial.print("angleDifference ");
   Serial.println(angle_difference);
 
 
@@ -256,27 +279,26 @@ void loop() {
 
 
 
-/* function to check if bow and cello are perpendicular
-    return
-      -1 if COMPLETE AFTER SOME TESTS
-      1
-      0
+/* 
+  function to check if bow and cello are perpendicular
 */
 void check_orientation(int* positionIsCorrect, float x_orientation_cello, float x_orientation_bow, float* result) {
   if (x_orientation_bow > ((int)(x_orientation_cello + accepted_offset) % 360)) {
     *positionIsCorrect = 1;
-    *result = abs(x_orientation_bow - x_orientation_cello);
   } else if (x_orientation_bow < ((int)(x_orientation_cello - accepted_offset) % 360)) {
     *positionIsCorrect = -1;
-    *result = abs(x_orientation_cello - x_orientation_bow);
   } else {
     *positionIsCorrect = 0;
-    *result = 0;
   }
+  *result = x_orientation_bow - x_orientation_cello;
   return;
 }
 
 
+/* modulo operator - always returns positive remainder */
+int mod( int x, int y ) {
+  return x < 0 ? ((x + 1) % y) + y - 1 : x % y;
+}
 
 
 /* generic function to print IMU data */
