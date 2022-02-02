@@ -78,7 +78,7 @@ void draw() {
     String[] s = splitTokens(data, " ");
     if (s[0].equals("angleDifference") == true){
       try {
-         angle = float(trim(s[1]));
+         angle = float(trim(s[1])) * (-1);
       }
       catch(Exception e) {
         println("Error in converting value"); 

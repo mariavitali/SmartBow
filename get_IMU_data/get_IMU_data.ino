@@ -55,15 +55,15 @@ uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
 /*------------------------------MOTORs------------------------------------------------------------------------------------------------------------*/
 
 /* set motors pins */
-int motorHigher_pin = 9;    // motorHigher activates if the orientation values are too high
-int motorLower_pin = 8;     // motorLower activates if the orientation values are too low
+int motorHigher_pin = 30;    // motorHigher activates if the orientation values are too high
+int motorLower_pin = 29;     // motorLower activates if the orientation values are too low
 
 
 /*------------------------------LED------------------------------------------------------------------------------------------------------------*/
 
-int greenLED_pin = 25;
-int redLED_pin = 27;
-int blueLED_pin = 29;
+int greenLED_pin = 3;
+int redLED_pin = 7;
+int blueLED_pin = 9;
 
 int greenLEDState = LOW;      // the current state of the output pin
 int redLEDState = LOW;        // the current state of the output pin
@@ -72,9 +72,9 @@ int blueLEDState = LOW;       // the current state of the output pin
 
 /*------------------------------BUTTONs------------------------------------------------------------------------------------------------------------*/
 
-int onOffButton_pin = 26;
-int recalibrationButton_pin = 28;
-int setZeroButton_pin = 30;
+int onOffButton_pin = 4;
+int recalibrationButton_pin = 8;
+int setZeroButton_pin = 10;
 
 int onOffButtonState;                     // the current reading from the input pin
 int recalibrationButtonState;             // the current reading from the input pin
@@ -218,7 +218,7 @@ void loop() {
     digitalWrite(blueLED_pin, LOW);
     blueLEDState = !blueLEDState;
   }
-
+/*
   Serial.print("orientation_cello.orientation.x = ");
   Serial.println(orientation_cello.orientation.x);
   Serial.print("orientation_bow.orientation.x = ");
@@ -227,6 +227,7 @@ void loop() {
   Serial.println(orientation_cello.orientation.x - zero_offset_cello);
   Serial.print("(orientation_bow.orientation.x - zero_offset_bow) = ");
   Serial.println(orientation_bow.orientation.x - zero_offset_bow);
+  */
   // change the "zero"
   orientation_cello.orientation.x = (orientation_cello.orientation.x - zero_offset_cello) + 180;   // +180, to set the zero at the central value of the range (0, 360)
   orientation_bow.orientation.x = (orientation_bow.orientation.x - zero_offset_bow) + 180;
@@ -266,6 +267,21 @@ void loop() {
     digitalWrite(motorLower_pin, LOW);
     digitalWrite(motorHigher_pin, LOW);
   }
+/*
+  angle_difference = orientation_bow.orientation.x - orientation_cello.orientation.x;
+  if (angle_difference > accepted_offset) {
+      // activate motorHigher
+      digitalWrite(motorLower_pin, LOW);
+      digitalWrite(motorHigher_pin, digitalRead(greenLED_pin));
+    } else if (angle_difference < ((-1) * accepted_offset)) {
+      // activate motorLower
+      digitalWrite(motorHigher_pin, LOW);
+      digitalWrite(motorLower_pin, digitalRead(greenLED_pin));
+    } else {
+      // turn off motors
+      digitalWrite(motorLower_pin, LOW);
+      digitalWrite(motorHigher_pin, LOW);
+    }*/
 
   // Serial.print("rel_or : ");
   // Serial.print(relative_orientation);
@@ -290,7 +306,7 @@ void check_orientation(int* positionIsCorrect, float x_orientation_cello, float 
   } else {
     *positionIsCorrect = 0;
   }
-  *result = x_orientation_bow - x_orientation_cello;
+  *result = x_orientation_bow - x_orientation_cello;      // store angle difference
   return;
 }
 
