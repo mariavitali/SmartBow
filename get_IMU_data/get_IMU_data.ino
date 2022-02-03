@@ -33,18 +33,18 @@
       Connect GROUND to common ground
 
    MOTORs
-      MotorHigher Connect to digital pin 9
-      MotorLower Connect to digital pin 8
+      MotorHigher Connect to digital pin 30
+      MotorLower Connect to digital pin 29
 
    BUTTONs
-      onOffButton Connect to digital pin
-      recalibrationButton Connect to digital pin
-      setZeroButton Connect to digital pin
+      onOffButton Connect to digital pin 4
+      recalibrationButton Connect to digital pin 8
+      setZeroButton Connect to digital pin 10
 
    LED
-      greenLED (OnOffButton) Connect to
-      redLED (RecalibrationButton)
-      blueLED (SetZeroButton)
+      greenLED (OnOffButton) Connect to digital pin 3
+      redLED (RecalibrationButton) Connect to digital pin 7
+      blueLED (SetZeroButton) Connect to digital pin 9
 
 */
 
@@ -118,9 +118,7 @@ bool display_BNO055_info = true; // set to true if you want to print on the seri
 float zero_offset_cello = 0;
 float zero_offset_bow = 0;
 
-int relative_orientation = 0;
 int accepted_offset = 15;   // accepted "deviance" angle from perfect orientation
-int basic_offset = 0;       // initial x angle between the 2 IMUs
 float angle_difference = 0;
 
 
@@ -218,57 +216,50 @@ void loop() {
     digitalWrite(blueLED_pin, LOW);
     blueLEDState = !blueLEDState;
   }
-/*
-  Serial.print("orientation_cello.orientation.x = ");
-  Serial.println(orientation_cello.orientation.x);
-  Serial.print("orientation_bow.orientation.x = ");
-  Serial.println(orientation_bow.orientation.x);
-  Serial.print("(orientation_cello.orientation.x - zero_offset_cello) = ");
-  Serial.println(orientation_cello.orientation.x - zero_offset_cello);
-  Serial.print("(orientation_bow.orientation.x - zero_offset_bow) = ");
-  Serial.println(orientation_bow.orientation.x - zero_offset_bow);
-  */
-  // change the "zero"
-  orientation_cello.orientation.x = (orientation_cello.orientation.x - zero_offset_cello) + 180;   // +180, to set the zero at the central value of the range (0, 360)
-  orientation_bow.orientation.x = (orientation_bow.orientation.x - zero_offset_bow) + 180;
 
-/*
+  /* set "zero" value */
+  // fix cello value
+  orientation_cello.orientation.x = (orientation_cello.orientation.x - zero_offset_cello);
+  
+  // compute bow value, taking into consideration the "jump" from 359 to 0 degree value
+  float new_orientation_bow = orientation_bow.orientation.x - zero_offset_bow;
+  
+  if(zero_offset_bow >= 180){
+    if((new_orientation_bow >= ((-1) * zero_offset_bow)) && (new_orientation_bow <= (-180))){
+      orientation_bow.orientation.x = new_orientation_bow + 360;
+    } 
+    else {
+      orientation_bow.orientation.x = new_orientation_bow;
+    }
+  }
+  else {                                    // zero_offset_bow < 180
+      if(new_orientation_bow > 180){
+        orientation_bow.orientation.x = new_orientation_bow - 360;
+      }
+      else {
+        orientation_bow.orientation.x = new_orientation_bow;
+      }
+  }
+
+
+  /* 
+   REMOVE COMMENT IF ORIENTATION DATA PRINT NEEDED
   // print data from cello
   Serial.println("=========== CELLO ===========");
   printEvent(&orientation_cello);
   Serial.print("");
 
 
-
   // print data from bow
   Serial.println("=========== BOW ===========");
   printEvent(&orientation_bow);
   Serial.print("");
-*/
+  */
 
 
-  /* check if the ratio between orientations is correct */
 
-  check_orientation(&relative_orientation, orientation_cello.orientation.x, orientation_bow.orientation.x, &angle_difference);
-
-  // the greater the difference between angles, the more motors vibrate
-  if (relative_orientation > 0) {
-    // activate motorHigher
-    digitalWrite(motorLower_pin, LOW);
-    // analogWrite(motorHigher_pin, !digitalRead(greenLED_pin) * map(angle_difference, 16, 344, 0, 255));
-    digitalWrite(motorHigher_pin, digitalRead(greenLED_pin));
-  } else if (relative_orientation < 0) {
-    // activate motorLower
-    digitalWrite(motorHigher_pin, LOW);
-    // analogWrite(motorLower_pin, !digitalRead(greenLED_pin) * map(angle_difference, 16, 344, 0, 255));
-    digitalWrite(motorLower_pin, digitalRead(greenLED_pin));
-  } else {
-    // turn off motors
-    digitalWrite(motorLower_pin, LOW);
-    digitalWrite(motorHigher_pin, LOW);
-  }
-/*
   angle_difference = orientation_bow.orientation.x - orientation_cello.orientation.x;
+  
   if (angle_difference > accepted_offset) {
       // activate motorHigher
       digitalWrite(motorLower_pin, LOW);
@@ -281,33 +272,14 @@ void loop() {
       // turn off motors
       digitalWrite(motorLower_pin, LOW);
       digitalWrite(motorHigher_pin, LOW);
-    }*/
+    }
 
-  // Serial.print("rel_or : ");
-  // Serial.print(relative_orientation);
+
   Serial.print("angleDifference ");
   Serial.println(angle_difference);
 
 
   delay(BNO055_SAMPLERATE_DELAY_MS);
-}
-
-
-
-
-/* 
-  function to check if bow and cello are perpendicular
-*/
-void check_orientation(int* positionIsCorrect, float x_orientation_cello, float x_orientation_bow, float* result) {
-  if (x_orientation_bow > ((int)(x_orientation_cello + accepted_offset) % 360)) {
-    *positionIsCorrect = 1;
-  } else if (x_orientation_bow < ((int)(x_orientation_cello - accepted_offset) % 360)) {
-    *positionIsCorrect = -1;
-  } else {
-    *positionIsCorrect = 0;
-  }
-  *result = x_orientation_bow - x_orientation_cello;      // store angle difference
-  return;
 }
 
 
