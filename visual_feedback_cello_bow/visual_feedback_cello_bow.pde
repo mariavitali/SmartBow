@@ -1,8 +1,17 @@
+import oscP5.*;
+import netP5.*;
 import processing.serial.*;
 
+// Serial communication to teensy
 Serial teensyPort;                 // Serial port number to read from
 static String data;    // IMUs x angles difference. Data from teensy.
 float angle = 0;
+
+
+// get data from pure data
+OscP5 oscP5;
+NetAddress myRemoteLocation;
+float freq = 0;
 
 
 //bow shape
@@ -68,11 +77,17 @@ void setup() {
   String portName = "/dev/ttyACM0";
   teensyPort = new Serial(this, portName);
   
+  // oscP5 to communicate with pure data
+  oscP5 = new OscP5(this, 32000);
+  myRemoteLocation = new NetAddress("127.0.0.1", 12000);
+  
   // initialize visual cue
   Cue_01 = new Cue();
 
   // inizialize object to communicate with pure data
   Current_string = new CelloString();
+  oscP5.plug(this, "receive_freq", "/freq");
+
   
   // Create a new file in the sketch directory
   output = createWriter("error_duration.txt");
@@ -82,7 +97,7 @@ void setup() {
 void draw() {
 
   // telling which string is currently played
-  Current_string.SetString(98);
+  Current_string.SetString(freq);
   
   if( teensyPort.available() > 0 ) {    // if data is available
     data = teensyPort.readStringUntil('\n');
@@ -191,6 +206,20 @@ void draw() {
 }
 
 
+
+
+
+void receive_freq(float value){
+  print("value received from pd: ");
+  println(value);
+  freq = value;
+}
+
+
+
+
+
+/*********************************************************************************/
 
 class CelloString {
 
