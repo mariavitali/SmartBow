@@ -60,7 +60,7 @@ void keyPressed() {
 
 
 void setup() {
-  size(1280, 720);
+  size(1280, 680);
 
   x_bow = width/2 - l/2;
   y_bow = height/2 - h/2;
@@ -79,14 +79,15 @@ void setup() {
   
   // oscP5 to communicate with pure data
   oscP5 = new OscP5(this, 32000);
-  myRemoteLocation = new NetAddress("127.0.0.1", 12000);
+  myRemoteLocation = new NetAddress("127.0.0.1", 32000);
+  oscP5.plug(this, "receive_freq", "/freq");
+
   
   // initialize visual cue
   Cue_01 = new Cue();
 
   // inizialize object to communicate with pure data
   Current_string = new CelloString();
-  oscP5.plug(this, "receive_freq", "/freq");
 
   
   // Create a new file in the sketch directory
@@ -213,6 +214,7 @@ void receive_freq(float value){
   print("value received from pd: ");
   println(value);
   freq = value;
+
 }
 
 
@@ -231,7 +233,7 @@ class CelloString {
 
   int range = 5;
 
-  String playing;
+  String playing = "";
 
   void SetString ( float hz) {
 
@@ -246,6 +248,8 @@ class CelloString {
     } else {
       playing = "None";
     }
+    
+    println(playing);
 
     textSize(20);
     textAlign(CENTER);
