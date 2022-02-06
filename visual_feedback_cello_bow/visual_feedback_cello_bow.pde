@@ -19,9 +19,14 @@ float y_trans;
 float x_c;
 float y_c;
 
-//color
+// color
 int c = 200;
 
+// visual cue to display error feedback
+Cue Cue_01;
+
+// analysis of pure data input (understand which string is playing)
+CelloString Current_string;
 
 
 PShape bot;
@@ -63,6 +68,12 @@ void setup() {
   String portName = "/dev/ttyACM0";
   teensyPort = new Serial(this, portName);
   
+  // initialize visual cue
+  Cue_01 = new Cue();
+
+  // inizialize object to communicate with pure data
+  Current_string = new CelloString();
+  
   // Create a new file in the sketch directory
   output = createWriter("error_duration.txt");
   
@@ -70,8 +81,8 @@ void setup() {
 
 void draw() {
 
-  //mouse position sets the degree
-  // int angle = mouseX - 100;
+  // telling which string is currently played
+  Current_string.SetString(98);
   
   if( teensyPort.available() > 0 ) {    // if data is available
     data = teensyPort.readStringUntil('\n');
@@ -160,6 +171,11 @@ void draw() {
   shape(bot, x_mano - 75, y_mano - 100, 150, 200);
 
 
+  //blinking cue
+  if (wrong_angle) {
+    Cue_01.display(4);
+  }
+
   //check some values
   println("----------");
   println("Current angle: ", angle);
@@ -172,4 +188,62 @@ void draw() {
   output.println("Error condition: " + wrong_angle);
   output.println("Error duration (s): " + error_duration / 50);
   output.println("Correct duration (s): " + correct_duration / 50);
+}
+
+
+
+class CelloString {
+
+  //strings frequencies
+  int string_01 = 220;
+  int string_02 = 146;
+  int string_03 = 98;
+  int string_04 = 65;
+
+  int range = 5;
+
+  String playing;
+
+  void SetString ( float hz) {
+
+    if (hz > (string_01 - range) && hz < (string_01 + range)) {
+      playing = "String 1 (A)";
+    } else if (hz > (string_02 - range) && hz < (string_02 + range)) {
+      playing = "String 2 (D)";
+    } else if (hz > (string_03 - range) && hz < (string_03 + range)) {
+      playing = "String 3 (G)";
+    } else if (hz > (string_04 - range) && hz < (string_04 + range)) {
+      playing = "String 4 (C)";
+    } else {
+      playing = "None";
+    }
+
+    textSize(20);
+    textAlign(CENTER);
+    fill(0);
+    text("You're playing " + playing, width/2, height - 30);
+  }
+}
+
+
+
+class Cue {
+
+  int l = 30;
+  int t = 0;
+
+  void display(int frequency) {
+
+    int n = 50/ (2*frequency);
+    t++;
+
+    if (t < n) {
+      noStroke();
+      fill(255, 0, 0);
+      rect(0, 0, l, height);
+      rect(width - l, 0, l, height);
+    } else if (t == (2*n)) {
+      t = 0;
+    }
+  }
 }
