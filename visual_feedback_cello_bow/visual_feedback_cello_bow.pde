@@ -97,8 +97,7 @@ void setup() {
 
 void draw() {
 
-  // telling which string is currently played
-  Current_string.SetString(freq);
+
   
   if( teensyPort.available() > 0 ) {    // if data is available
     data = teensyPort.readStringUntil('\n');
@@ -185,6 +184,9 @@ void draw() {
 
   fill(255);
   shape(bot, x_mano - 75, y_mano - 100, 150, 200);
+  
+  // telling which string is currently played
+  Current_string.SetString(freq);
 
 
   //blinking cue
@@ -214,7 +216,6 @@ void receive_freq(float value){
   print("value received from pd: ");
   println(value);
   freq = value;
-
 }
 
 
@@ -236,7 +237,8 @@ class CelloString {
   String playing = "";
 
   void SetString ( float hz) {
-
+    println("we are in the set String function");
+    println(hz);
     if (hz > (string_01 - range) && hz < (string_01 + range)) {
       playing = "String 1 (A)";
     } else if (hz > (string_02 - range) && hz < (string_02 + range)) {
