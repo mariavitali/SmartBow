@@ -13,9 +13,15 @@
      It gets Euler angles of the position and orietation of the bow
 
    Data from both sensors is collected. The program compares the different orientations
-   and checks whether the bow is perpendicular to the cello neck.
+   and checks whether the bow is perpendicular to the cello strings.
 
-   ....TO BE FINISHED ONCE THE CODE IS MORE PRECISE
+   If the angle difference between cello and bow orientations is higher that a fixed offset, 
+   2 vibration motors are activated, depending on the direction of the angle (positive or negative difference).
+
+   In order to compare the 2 angles, an initial "zero" position is set whenever a button is pressed.
+   Subsequent orientations are adjusted according to this initial position.
+
+   IMUs can be recalibrated if necessary.
 
 
 
@@ -118,9 +124,8 @@ bool display_BNO055_info = true; // set to true if you want to print on the seri
 float zero_offset_cello = 0;
 float zero_offset_bow = 0;
 
-int accepted_offset = 15;   // accepted "deviance" angle from perfect orientation
+int accepted_offset = 8;   // accepted "deviance" angle from perfect orientation
 float angle_difference = 0;
-
 
 
 void setup() {
@@ -221,7 +226,7 @@ void loop() {
   // fix cello value
   orientation_cello.orientation.x = (orientation_cello.orientation.x - zero_offset_cello);
   
-  // compute bow value, taking into consideration the "jump" from 359 to 0 degree value
+  // compute bow value, taking into consideration the "jump" from 359° to 0° value
   float new_orientation_bow = orientation_bow.orientation.x - zero_offset_bow;
   
   if(zero_offset_bow >= 180){

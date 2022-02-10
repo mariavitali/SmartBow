@@ -44,7 +44,7 @@ PShape f;
 
 /* print data on externatl file */
 // error/correct counter
-int limit_angle = 15;  
+int limit_angle = 8;  
 boolean wrong_angle = false;
 float error_duration;
 float correct_duration;
@@ -60,7 +60,7 @@ void keyPressed() {
 
 
 void setup() {
-  size(1280, 680);
+  size(1280, 720);
 
   x_bow = width/2 - l/2;
   y_bow = height/2 - h/2;
@@ -131,6 +131,8 @@ void draw() {
 
   //Alfa is our angle expressed in radians
   float alfa = radians(angle);
+  print("after conversion in radians: ");
+  println(alfa);
 
   float raggio = sqrt(pow(x_c, 2) + pow(y_c, 2));
 
@@ -201,11 +203,12 @@ void draw() {
   println("Error duration (s): ", error_duration / 50);
   println("Correct duration (s): ", correct_duration / 50);
 
-  output.println("----------");
+  /*output.println("----------");
   output.println("Current angle: " + angle);
   output.println("Error condition: " + wrong_angle);
   output.println("Error duration (s): " + error_duration / 50);
-  output.println("Correct duration (s): " + correct_duration / 50);
+  output.println("Correct duration (s): " + correct_duration / 50);*/
+  output.println(angle + ", " + wrong_angle + ", " + error_duration/50 + ", " + correct_duration/50);
 }
 
 
